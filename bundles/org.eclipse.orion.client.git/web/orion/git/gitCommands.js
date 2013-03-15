@@ -1838,7 +1838,7 @@ var exports = {};
 							"Getting repository details " + item.Name).then(
 						function(clone) {
 							var nonHash = window.location.href.split('#')[0]; //$NON-NLS-0$
-							var orionHome = new URL(require.toUrl("."), window.location).href.slice(0,-1);
+							var orionHome = new URL(require.toUrl("orion/../"), window.location).href.slice(0,-1);
 							var url = sshCheck(clone.Children[0].GitUrl);
 							var reviewRequestUrl = orionHome + "/git/reviewRequest.html#" + url + "_" + item.Name;
 							progress.progress(
@@ -1861,7 +1861,7 @@ var exports = {};
 					progress.progress(serviceRegistry.getService("orion.git.provider").getGitClone(item.CloneLocation),
 							"Getting git details " + item.Name).then(function(clone) {
 						var nonHash = window.location.href.split('#')[0]; //$NON-NLS-0$
-						var orionHome = new URL(require.toUrl("."), window.location).href.slice(0,-1);
+						var orionHome = new URL(require.toUrl("orion/../"), window.location).href.slice(0,-1);
 						var url = sshCheck(clone.Children[0].GitUrl);
 						var reviewRequestUrl = orionHome + "/git/reviewRequest.html#" + url + "_" + item.Name;
 						var dialog = new mReviewRequest.ReviewRequestDialog({ title : messages["Contribution Review Request"],

@@ -15,7 +15,7 @@ define(['require', 'orion/URITemplate', 'orion/URL-shim', 'orion/serviceTracker'
 	function getHref(location) {
 		var NAVIGATE_TO_TEMPLATE = new URITemplate('{OrionHome}/navigate/table.html#{NavigatorLocation}?depth=1'); //$NON-NLS-0$
 		return decodeURIComponent(NAVIGATE_TO_TEMPLATE.expand({
-			OrionHome: new URL(require.toUrl('.'), window.location.href).href.slice(0,-1),  //$NON-NLS-0$
+			OrionHome: new URL(require.toUrl("orion/../"), window.location.href).href.slice(0,-1),  //$NON-NLS-0$
 			NavigatorLocation: location
 		}));
 	}
