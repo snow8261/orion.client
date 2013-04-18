@@ -527,8 +527,8 @@ exports.setUpEditor = function(serviceRegistry, preferences, isReadOnly){
 		outlineService: outlineService,
 		selection: selection,
 		serviceRegistry: serviceRegistry,
-		parentNode: sidebarDomNode,
-		toolbarNode: sidebarToolbar
+		parent: sidebarDomNode,
+		toolbar: sidebarToolbar
 	});
 
 	window.onbeforeunload = function() {
