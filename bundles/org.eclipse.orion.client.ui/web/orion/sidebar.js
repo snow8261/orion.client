@@ -1,9 +1,10 @@
 /*global console define*/
 /*jslint browser:true sub:true*/
-define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', 'orion/explorers/explorer-table', 'orion/webui/littlelib',
+define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', 'orion/webui/littlelib',
 		'orion/widgets/nav/mini-nav',
 		'i18n!orion/nls/messages'],
-		function(Deferred, objects, mCommands, mOutliner, mExplorer, lib, MiniNavRenderer, messages) {
+		function(Deferred, objects, mCommands, mOutliner, lib, MiniNav, messages) {
+	var MiniNavExplorer = MiniNav.MiniNavExplorer, MiniNavRenderer = MiniNav.MiniNavRenderer;
 	/**
 	 * @name orion.sidebar.Sidebar
 	 * @class Sidebar that appears alongside an {@link orion.editor.Editor} in the Orion IDE.
@@ -13,10 +14,9 @@ define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', '
 	 * @param {orion.fileClient.FileClient} params.fileClient
 	 * @param {orion.editor.InputManager} params.inputManager
 	 * @param {orion.outliner.OutlineService} params.outlineService
+	 * @param {orion.progress.ProgressService} params.progressService
 	 * @param {orion.selection.Selection} params.selection
 	 * @param {orion.serviceregistry.ServiceRegistry} params.serviceRegistry
-	 *
-	 * TODO separate UI from rest of Sidebar
 	 * @param {Element|String} params.parent
 	 * @param {Element|String} params.toolbar
 	 */
@@ -37,6 +37,7 @@ define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', '
 		this.switcherNode = null;
 	}
 	objects.mixin(Sidebar.prototype, /** @lends orion.sidebar.Sidebar.prototype */ {
+		defaultViewMode: "nav",
 		show: function() {
 			if (this.created) {
 				return;
@@ -48,9 +49,10 @@ define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', '
 			var inputManager = this.inputManager;
 			var outlineService = this.outlineService;
 			var parentNode = this.parentNode;
-			var toolbarNode = this.toolbarNode;
+			var progressService = this.progressService;
 			var selection = this.selection;
 			var serviceRegistry = this.serviceRegistry;
+			var toolbarNode = this.toolbarNode;
 
 			// Create toolbar contribution area for use by viewmodes
 			var modeContributionToolbar = document.createElement("div"); //$NON-NLS-0$
@@ -77,17 +79,21 @@ define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', '
 			commandRegistry.registerCommandContribution(switcherNode.id, "orion.sidebar.viewmode", 1); //$NON-NLS-0$
 
 			var _self = this;
-			// TODO refactor create and destroy into mini-nav.js
 			this.addViewMode("nav", { //$NON-NLS-0$
 				label: messages["Navigator"],
 				create: function() {
 					if (_self.miniNavExplorer) {
 						return;
 					}
-					_self.miniNavExplorer = new mExplorer.FileExplorer({
-						selection: this.drivesSelection,
+					_self.miniNavExplorer = new MiniNavExplorer({
+						//treeRoot: ???
+						// TODO: this selection service is no good--tied to the hash
+						// we need a separate one -- but it has to drive the editor
+						// or simpler, just customize the base links
+						selection: _self.selection,
 						serviceRegistry: serviceRegistry,
 						fileClient: fileClient,
+						inputManager: inputManager,
 						parentId: parentNode,
 						rendererFactory: function(explorer) { //$NON-NLS-0$
 							var renderer = new MiniNavRenderer({
@@ -109,13 +115,10 @@ define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', '
 				commandService: commandRegistry,
 				selectionService: selection,
 				inputManager: inputManager,
+				progressService: progressService,
 				sidebar: this
 			});
-			/*
-			catch (e) {
-				if (typeof console !== "undefined" && console) { console.log(e && e.stack); } //$NON-NLS-0$
-			}
-			*/
+			this.setViewMode(this.defaultViewMode);
 		},
 		/** @private */
 		viewModeMenuCallback: function() {
