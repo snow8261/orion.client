@@ -87,9 +87,9 @@ define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', '
 					}
 					_self.miniNavExplorer = new MiniNavExplorer({
 						//treeRoot: ???
-						// TODO: this selection service is no good--tied to the hash
-						// we need a separate one -- but it has to drive the editor
-						// or simpler, just customize the base links
+						// TODO intercept selection from nav, grab the file URI from selected file object, and let selection continue 
+						// to the inputManager which will change the editor.
+						// i am so clever
 						selection: _self.selection,
 						serviceRegistry: serviceRegistry,
 						fileClient: fileClient,
@@ -101,8 +101,10 @@ define(['orion/Deferred', 'orion/objects', 'orion/commands', 'orion/outliner', '
 								cachePrefix: "MiniNav"}, explorer, commandRegistry, contentTypeRegistry); //$NON-NLS-0$
 							return renderer;
 					}});
+					// tell it to load here
 				},
 				destroy: function() {
+					lib.empty(parentNode);
 				}
 			});
 
