@@ -135,6 +135,11 @@ a.currentLocation:hover {
 	background: white;
 }
 
+/* Set a min-width on a treetable if it's the main attraction */
+.mainpane .treetable {
+	min-width: 600px;
+}
+
 .mainToolbar {
  	background: #ffffff;
 	border-bottom: 1px solid #ebebeb;
@@ -331,7 +336,7 @@ a.currentLocation:hover {
 }
 
 .dropdownMenu > li {
-	min-width: 120px;
+	/*min-width: 120px;*/
 	padding: 0 2px;
 	display: block;
 }
