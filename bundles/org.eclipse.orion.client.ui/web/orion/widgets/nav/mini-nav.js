@@ -50,6 +50,10 @@ define(['require', 'i18n!orion/edit/nls/messages', 'orion/objects', 'orion/webui
 		}
 	};
 
+	/**
+	 * @class orion.sidebar.MiniNavExplorer
+	 * @extends orion.explorers.FileExplorer
+	 */
 	function MiniNavExplorer(params) {
 		params.setFocus = false;   // do not steal focus on load
 		params.cachePrefix = null; // do not persist table state
@@ -95,7 +99,54 @@ define(['require', 'i18n!orion/edit/nls/messages', 'orion/objects', 'orion/webui
 		this.commandsRegistered = this.registerCommands();
 	}
 	MiniNavExplorer.prototype = Object.create(FileExplorer.prototype);
-	objects.mixin(MiniNavExplorer.prototype, {
+	objects.mixin(MiniNavExplorer.prototype, /** @lends orion.sidebar.MiniNavExplorer.prototype */ {
+		changedItem: function(item) {
+			// Hack to detect if we changed the current file being edited, or an ancestor thereof.
+			var editorFile = this.editorInputManager.getFileMetadata();
+			var ancestorChain = [editorFile].concat(editorFile.Parents || []);
+			var affectedAncestor;
+			ancestorChain.some(function(file) {
+				if (item.Location === file.Location) {
+					affectedAncestor = item;
+					return true;
+				}
+				return false;
+			});
+			var _self = this;
+			return FileExplorer.prototype.changedItem.apply(this, arguments).then(function() {
+				var root = _self.treeRoot, newChildren = root.children;
+				// We reloaded the nav root, and the nav was showing an ancestor of the editor input.
+				// Check children of the nav root -- we expect the affected ancestor to still 
+				// be present. If it's not then we're in trouble
+				if (affectedAncestor) {
+					console.log(affectedAncestor);
+					// still not right
+					var stillThere = [root].concat(newChildren).some(function(child) {
+						var result = child.Location === affectedAncestor.Location;
+						if (result) {
+							console.log('safe, found: ' + affectedAncestor.Location);
+						}
+						return result;
+					});
+					if (!stillThere) {
+						alert("" + affectedAncestor.Name + ' is gone!!');
+					}
+				}
+			});
+//			if (item) {
+//				var editorFile = this.editorInputManager.getFileMetadata();
+//				var ancestorChain = [editorFile].concat(editorFile.Parents || []);
+//				var isTrouble = ancestorChain.some(function(file) {
+//					var match = file.Location === item.Location;
+//					if (match) {console.log(file.Location + ' is ' + item.Location); }
+//					return match;
+//				});
+//				if (isTrouble) {
+//					console.log('Trouble');
+//				}
+//			}
+//			return FileExplorer.prototype.changedItem.apply(this, arguments);
+		},
 		createActionSections: function() {
 			var _self = this;
 			// Create some elements that we can hang actions on. Ideally we'd have just 1, but the
