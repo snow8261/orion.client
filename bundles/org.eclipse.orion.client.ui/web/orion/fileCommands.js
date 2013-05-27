@@ -276,7 +276,6 @@ define(['i18n!orion/navigate/nls/messages', 'require', 'orion/webui/littlelib', 
 	 */
 	fileCommandUtils.createFileCommands = function(serviceRegistry, commandService, explorer, fileClient) {
 		progressService = serviceRegistry.getService("orion.page.progress"); //$NON-NLS-0$
-
 		var dispatchModelEvent = dispatchModelEventOn.bind(null, explorer);
 
 		function contains(arr, item) {
@@ -500,44 +499,56 @@ define(['i18n!orion/navigate/nls/messages', 'require', 'orion/webui/littlelib', 
 					}
 					return item.Location;
 				},
+				parameters: new mCommandRegistry.ParametersDescription(null, {},
+					function(commandInvocation) {
+						var items = Array.isArray(commandInvocation.items) ? commandInvocation.items : [commandInvocation.items];
+						var treeRoot = explorer.treeRoot;
+						if (items.some(function(item) { return (item === treeRoot); })) {
+							// Renaming root of file explorer -- want a popup param collector since there is no convenient inplace rename node.
+							return [
+								new mCommandRegistry.CommandParameter('name', 'text', messages['Name:'], treeRoot.Name) //$NON-NLS-1$ //$NON-NLS-0$
+							];
+						}
+						return null; // will do inplace rename in the callback
+					}),
 				callback: function(data) {
-					// we want to popup the edit box over the name in the explorer.
-					// if we can't find it, we'll pop it up over the command dom element.
 					var item = forceSingleItem(data.items);
-					var refNode = explorer.getNameNode(item);
-					if (!refNode) {
-						// TODO FIXME mamacdon: using domParent/domNode is bad when the command is triggered from a dropdown menu:
-						// it dumps the edit box into the menu, which is not visible. Need special case for menu: with a param collector
-						// since there is no convenient element. 
-						refNode = data.domParent || data.domNode; // mamacdon FIXME this is a travesty
+					function doMove(newText) {
+						var moveLocation = item.Location;
+						Deferred.when(getLogicalModelItems(item), function(logicalItems) {
+							item = logicalItems.item;
+							var parent = logicalItems.parent;
+							if (parent.Projects) {
+								//special case for moving a project. We want to move the project rather than move the project's content
+								parent.Projects.some(function(project) {
+									if (project.Id === item.Id) {
+										moveLocation = project.Location;
+										return true;
+									}
+									return false;
+								});
+							}
+							var deferred = fileClient.moveFile(moveLocation, parent.Location, newText);
+							progressService.showWhile(deferred, i18nUtil.formatMessage(messages["Renaming ${0}"], moveLocation)).then(
+								function(newItem) {
+									dispatchModelEvent({ type: "move", oldValue: item, newValue: newItem, parent: parent }); //$NON-NLS-0$
+								},
+								errorHandler
+							);
+						});
 					}
-					mUIUtils.getUserText(refNode.id+"EditBox", refNode, true, item.Name,  //$NON-NLS-0$
-						function(newText) {
-							var moveLocation = item.Location;
-							Deferred.when(getLogicalModelItems(item), function(logicalItems) {
-								item = logicalItems.item;
-								var parent = logicalItems.parent;
-								if (parent.Projects) {
-									//special case for moving a project. We want to move the project rather than move the project's content
-									parent.Projects.some(function(project) {
-										if (project.Id === item.Id) {
-											moveLocation = project.Location;
-											return true;
-										}
-										return false;
-									});
-								}
-								var deferred = fileClient.moveFile(moveLocation, parent.Location, newText);
-								progressService.showWhile(deferred, i18nUtil.formatMessage(messages["Renaming ${0}"], moveLocation)).then(
-									function(newItem) {
-										dispatchModelEvent({ type: "move", oldValue: item, newValue: newItem, parent: parent }); //$NON-NLS-0$
-									},
-									errorHandler
-								);
-							});
-						}, 
-						null, null, "." //$NON-NLS-0$
-					); 
+					var name;
+					if (data.parameters.hasParameters() && (name = data.parameters.valueFor("name")) !== null) { //$NON-NLS-0$
+						doMove(name);
+					} else {
+						// we want to popup the edit box over the name in the explorer.
+						// if we can't find it, we'll pop it up over the command dom element.
+						var refNode = explorer.getNameNode(item);
+						if (!refNode) {
+							refNode = data.domParent || data.domNode;
+						}
+						mUIUtils.getUserText(refNode.id+"EditBox", refNode, true, item.Name, doMove, null, null, ".");  //$NON-NLS-1$ //$NON-NLS-0$
+					}
 				}
 			});
 		commandService.addCommand(renameCommand);
