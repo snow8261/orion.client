@@ -154,8 +154,7 @@ define(['i18n!orion/navigate/nls/messages', 'require', 'orion/Deferred', 'orion/
 		["copy", "copyMultiple", "create", "delete", "deleteMultiple", "import", //$NON-NLS-5$//$NON-NLS-4$//$NON-NLS-3$//$NON-NLS-2$//$NON-NLS-1$//$NON-NLS-0$
 		 "move", "moveMultiple"].forEach(function(eventType) { //$NON-NLS-1$//$NON-NLS-0$
 				modelEventDispatcher.addEventListener(eventType, _self.modelHandler[eventType].bind(_self));
-				// DEBUG
-				modelEventDispatcher.addEventListener(eventType, function(evt) { console.log(evt); });
+				modelEventDispatcher.addEventListener(eventType, function(evt) { console.log(evt); }); // DEBUG
 			});
 
 		// Same tab/new tab setting
@@ -215,8 +214,14 @@ define(['i18n!orion/navigate/nls/messages', 'require', 'orion/Deferred', 'orion/
 			var forceExpand = null;
 			if (parent.Projects) {
 				if (ex.treeRoot.Location === item.Location) {
-					//the treeRoot was moved
-					ex.dispatchEvent({ type: "inputMoved", newInput: (newItem.ChildrenLocation || newItem.ContentLocation) }); //$NON-NLS-0$
+					// the treeRoot was moved
+					var oldRoot = ex.treeRoot;
+					var realNewItem = newItem.ChildrenLocation ? newItem : this.fileClient.read(newItem.ContentLocation, true);
+					Deferred.when(realNewItem, function(newItem) {
+						var newPath = (newItem.ChildrenLocation || newItem.ContentLocation);
+						ex.dispatchEvent({ type: "rootMoved", oldValue: oldRoot, newValue: newItem }); //$NON-NLS-0$
+						ex.loadResourceList(newPath);
+					});
 				} else {
 					//special case for renaming a project. Use the treeRoot as the refresh item.
 					refreshItem = ex.treeRoot;
@@ -450,14 +455,16 @@ define(['i18n!orion/navigate/nls/messages', 'require', 'orion/Deferred', 'orion/
 		this._lastPath = path;
 		var self = this;
 		if (force || (path !== this.treeRoot.Path)) {
-			return this.load(this.fileClient.loadWorkspace(path), "Loading " + path).then(function() {
+			return this.load(this.fileClient.loadWorkspace(path), "Loading " + path).then(function(p) {
 				self.treeRoot.Path = path;
 				if (typeof postLoad === "function") { //$NON-NLS-0$
 					postLoad();
 				}
+				self.dispatchEvent({ type: "rootChanged", root: self.treeRoot }); //$NON-NLS-0$
 				return new Deferred().resolve(self.treeRoot);
 			}, function(err) {
 				self.treeRoot.Path = null;
+				self.dispatchEvent({ type: "rootChanged", root: self.treeRoot }); //$NON-NLS-0$
 				return new Deferred().reject(err);
 			});
 		}
