@@ -13,7 +13,7 @@
 /*jslint forin:true devel:true browser:true*/
 
 
-define(["orion/Deferred", "orion/xhr", "orion/URL-shim"], function(Deferred, xhr) {
+define(["orion/Deferred", "orion/xhr", "orion/URL-shim", "orion/operation"], function(Deferred, orionXhr, _, operation) {
 	/**
 	 * An implementation of the file service that understands the Orion 
 	 * server file API. This implementation is suitable for invocation by a remote plugin.
@@ -23,6 +23,7 @@ define(["orion/Deferred", "orion/xhr", "orion/URL-shim"], function(Deferred, xhr
 		temp.href = location;
 		return temp.href;
 	}
+
 	function _normalizeLocations(data) {
 		if (data && typeof data === "object") {
 			Object.keys(data).forEach(function(key) {
@@ -36,7 +37,20 @@ define(["orion/Deferred", "orion/xhr", "orion/URL-shim"], function(Deferred, xhr
 		}
 		return data;
 	}
-	
+
+	// Wrap orion/xhr to handle possible long-running tasks.
+	function xhr() {
+		return orionXhr.apply(null, Array.prototype.slice.call(arguments)).then(function(result) {
+			if (result.xhr && result.xhr.status === 202) {
+				var response =  result.response ? JSON.parse(result.response) : null;
+				var d = new Deferred();
+				operation.handle(response.Location).then(d.resolve, d.reject, d.progress); // forward progress
+				return d;
+			}
+			return result;
+		});
+	}
+
 	/**
 	 * Escapes all characters in the string that require escaping in Lucene queries.
 	 * See http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters

@@ -798,8 +798,7 @@ define(['i18n!orion/navigate/nls/messages', 'require', 'orion/webui/littlelib', 
 					progressService.showWhile(deferred, i18nUtil.formatMessage(messages["Importing from ${0}"], sourceURL)).then(
 						function() {
 							dispatchModelEvent({ type: "import", target: targetFolder }); //$NON-NLS-0$
-						},
-						errorHandler
+						}
 					);
 				}
 			},
